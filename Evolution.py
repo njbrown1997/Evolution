@@ -5,127 +5,162 @@ from pygame.locals import *
 import random, time
 import numpy
 from Matrixes import *
- 
-#Initializing 
-pygame.init()
 
-MANUAL = False
 
-#Setting up FPS 
-FPS = 60
-FramePerSec = pygame.time.Clock()
- 
-#Creating colors
-BLUE  = (0, 0, 255)
-RED   = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-BLUEGRAY = (40,40,80)
- 
-#Other Variables for use in the program
-SCREEN_WIDTH = 900
-SCREEN_HEIGHT = 700
-SPEED = 5
- 
-#Create a white screen 
-DISPLAYSURF = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
-DISPLAYSURF.fill(BLUEGRAY)
-pygame.display.set_caption("Evolution")
- 
-worldMatrix = createRandomBinaryMatrix(int(SCREEN_WIDTH/100),int(SCREEN_HEIGHT/100),10)
-numRows, numCols = worldMatrix.shape
+TILE_SIZE = 100
 
 class Food(pygame.sprite.Sprite):
       def __init__(self,x,y):
         super().__init__() 
-        self.image = pygame.image.load("Banana.png")
+        self.image = pygame.transform.scale(pygame.image.load("Banana.png"),(TILE_SIZE,TILE_SIZE))
         self.rect = self.image.get_rect()
-        self.coords = (x,y)
-        self.rect.center = (y*100 +50,x*100 + 50)
+        self.rect.center = (y*TILE_SIZE + TILE_SIZE/2,x*TILE_SIZE + TILE_SIZE/2)
  
 class Monkey(pygame.sprite.Sprite):
-    def __init__(self,x,y):
+    def __init__(self):
         super().__init__() 
-        self.image = pygame.image.load("Monkey.png")
+        self.image = pygame.transform.scale(pygame.image.load("Monkey.png"),(TILE_SIZE,TILE_SIZE))
         self.rect = self.image.get_rect()
-        self.coords = (x,y)
-        self.rect.center = (y*100 +50,x*100 + 50)
+        self.coords = (0,0)
+        self.rect.center = (TILE_SIZE/2,TILE_SIZE/2)
         self.movesMade = 0
         self.foodEaten = 0
 
-    def updateLocation(self,x,y):
-        if 0 <= x < numRows and 0 <= y < numCols and (x != self.coords[0] or y != self.coords[1]):
+    def updateLocation(self,worldMatrix,x,y):
+        ROWS,COLS = worldMatrix.shape
+        if 0 <= x < ROWS and 0 <= y < COLS and (x != self.coords[0] or y != self.coords[1]):
             worldMatrix[self.coords[0]][self.coords[1]] = 0
+            if worldMatrix[x][y] == 1:
+                self.foodEaten += 1
             self.coords = (x,y)
             worldMatrix[x][y] = -1
-            self.rect.center = (y*100 +50,x*100 + 50)
+            self.rect.center = (y*TILE_SIZE + TILE_SIZE/2,x*TILE_SIZE + TILE_SIZE/2)
             self.movesMade += 1
+            return True
+        else:
+            return False
 
-    def moveAI(self):
-        time.sleep(.5)
+    def moveAI(self,worldMatrix):
         num = random.randint(1,4)
         if num == 1:
-                M.updateLocation(M.coords[0] + 1,M.coords[1])
+                if self.updateLocation(worldMatrix,self.coords[0] + 1,self.coords[1]):
+                    return True
         elif num == 2:
-                M.updateLocation(M.coords[0] - 1,M.coords[1])
+                if self.updateLocation(worldMatrix,self.coords[0] - 1,self.coords[1]):
+                    return True
         elif num == 3:
-                M.updateLocation(M.coords[0],M.coords[1]+1)
+                if self.updateLocation(worldMatrix,self.coords[0],self.coords[1]+1):
+                    return True
         else:
-                M.updateLocation(M.coords[0] ,M.coords[1]-1)
+                if self.updateLocation(worldMatrix,self.coords[0] ,self.coords[1]-1):
+                    return True
+        return False
+
+def simulate(M,worldMatrix,moveCapacity, manualControl, render):
+    ROWS,COLS = worldMatrix.shape
+    if render:
+        #Initializing 
+        pygame.init()
+
+        #Setting up FPS 
+        FPS = 60
+        FramePerSec = pygame.time.Clock()
+        
+        #Creating colors
+        BLUEGRAY = (40,40,80)
+        
+        #Create a white screen 
+        DISPLAYSURF = pygame.display.set_mode((TILE_SIZE*COLS,TILE_SIZE*ROWS))
+        DISPLAYSURF.fill(BLUEGRAY)
+        pygame.display.set_caption("Evolution")
+
+        #Creating Sprites Groups
+        food = pygame.sprite.Group()
+        all_sprites = pygame.sprite.Group()
+
+        #Setting up Sprites        
+        for i in range(0, ROWS):
+            for j in range(0,COLS):
+                if worldMatrix[i,j] == 1:
+                    F = Food(i,j)
+                    food.add(F)
+                    all_sprites.add(F)
+                elif worldMatrix[i,j] == -1:
+                    M.updateLocation(worldMatrix,i,j)
+                    all_sprites.add(M)
+    else:
+        for i in range(0, ROWS):
+            for j in range(0,COLS):
+                if worldMatrix[i,j] == -1:
+                    M.updateLocation(worldMatrix,i,j)
+
+    M.movesMade = M.foodEaten = 0
+    #Game Loop
+    while M.movesMade < moveCapacity:
+        if render:
+            pygame.display.set_caption("Moves Made: " + str(M.movesMade) + " | Food Eaten: " + str(M.foodEaten))
+            DISPLAYSURF.fill(BLUEGRAY)
+            #Moves and Re-draws all Sprites
+            for entity in all_sprites:
+                DISPLAYSURF.blit(entity.image, entity.rect)
+
+            pygame.display.update()
+            #Cycles through all events occuring  
+            for event in pygame.event.get():           
+                if event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                if manualControl:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_DOWN:
+                            M.updateLocation(worldMatrix,M.coords[0] + 1,M.coords[1])
+                        if event.key == pygame.K_UP:
+                            M.updateLocation(worldMatrix,M.coords[0] - 1,M.coords[1])
+                        if event.key == pygame.K_RIGHT:
+                            M.updateLocation(worldMatrix,M.coords[0],M.coords[1]+1)
+                        if event.key == pygame.K_LEFT:
+                            M.updateLocation(worldMatrix,M.coords[0] ,M.coords[1]-1)
+                    
+        if not(manualControl) or not(render):
+            if M.moveAI(worldMatrix) and render: time.sleep(.1)
+
+        if render:
+            #To be run if collision occurs between Monkey and Food
+            collision = pygame.sprite.spritecollideany(M, food)
+            if collision:
+                pygame.display.update()
+                collision.kill()
+
+    #End Screen
+    if render:
+        pygame.display.set_caption("Moves Made: " + str(M.movesMade) + " | Food Eaten: " + str(M.foodEaten))
+        DISPLAYSURF.fill(BLUEGRAY)
+        #Moves and Re-draws all Sprites
+        for entity in all_sprites:
+            DISPLAYSURF.blit(entity.image, entity.rect)
+        pygame.display.update()
+        #To be run if collision occurs between Monkey and Food
+        collision = pygame.sprite.spritecollideany(M, food)
+        if collision:
+            pygame.display.update()
+            collision.kill()
+        time.sleep(2)
 
 
-#Creating Sprites Groups
-food = pygame.sprite.Group()
-all_sprites = pygame.sprite.Group()
+##################################################################################
+###########################    Run Simulations    ################################
+##################################################################################
 
-#Setting up Sprites        
-for i in range(0, numRows):
-    for j in range(0,numCols):
-        if worldMatrix[i,j] == 1:
-            F = Food(i,j)
-            food.add(F)
-            all_sprites.add(F)
-        elif worldMatrix[i,j] == -1:
-            M = Monkey(i,j)
-            all_sprites.add(M)
+worldMatrix= createRandomBinaryMatrix(9,7,30)
+M = Monkey()
+simulate(M,worldMatrix,50,False, True)
+print(M.foodEaten)
 
-  
-#Game Loop
-while M.movesMade < 50:
-    pygame.display.set_caption("Moves Made: " + str(M.movesMade) + " | Food Eaten: " + str(M.foodEaten))
-    #Cycles through all events occuring  
-    for event in pygame.event.get():           
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
+worldMatrix= createRandomBinaryMatrix(9,7,30)
+simulate(M,worldMatrix,50,False, False)
+print(M.foodEaten)
 
-        if MANUAL:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN:
-                    M.updateLocation(M.coords[0] + 1,M.coords[1])
-                if event.key == pygame.K_UP:
-                    M.updateLocation(M.coords[0] - 1,M.coords[1])
-                if event.key == pygame.K_RIGHT:
-                    M.updateLocation(M.coords[0],M.coords[1]+1)
-                if event.key == pygame.K_LEFT:
-                    M.updateLocation(M.coords[0] ,M.coords[1]-1)
-                
-    DISPLAYSURF.fill(BLUEGRAY)
- 
-    #Moves and Re-draws all Sprites
-    for entity in all_sprites:
-        DISPLAYSURF.blit(entity.image, entity.rect)
-    if not(MANUAL):
-         M.moveAI()
-    
-    #To be run if collision occurs between Monkey and Food
-    collision = pygame.sprite.spritecollideany(M, food)
-    if collision:
-          pygame.display.update()
-          worldMatrix[collision.coords[0]][collision.coords[1]] = -1
-          collision.kill()
-          M.foodEaten += 1
-         
-    pygame.display.update()
-    FramePerSec.tick(FPS)
+worldMatrix= createRandomBinaryMatrix(9,7,1)
+simulate(M,worldMatrix,50,False, True)
+print(M.foodEaten)
