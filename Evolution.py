@@ -5,56 +5,9 @@ from pygame.locals import *
 import random, time
 import numpy
 from Matrixes import *
+from Monkey import *
 
-
-TILE_SIZE = 100
-
-class Food(pygame.sprite.Sprite):
-      def __init__(self,x,y):
-        super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Banana.png"),(TILE_SIZE,TILE_SIZE))
-        self.rect = self.image.get_rect()
-        self.rect.center = (y*TILE_SIZE + TILE_SIZE/2,x*TILE_SIZE + TILE_SIZE/2)
- 
-class Monkey(pygame.sprite.Sprite):
-    def __init__(self):
-        super().__init__() 
-        self.image = pygame.transform.scale(pygame.image.load("Monkey.png"),(TILE_SIZE,TILE_SIZE))
-        self.rect = self.image.get_rect()
-        self.coords = (0,0)
-        self.rect.center = (TILE_SIZE/2,TILE_SIZE/2)
-        self.movesMade = 0
-        self.foodEaten = 0
-
-    def updateLocation(self,worldMatrix,x,y):
-        ROWS,COLS = worldMatrix.shape
-        if 0 <= x < ROWS and 0 <= y < COLS and (x != self.coords[0] or y != self.coords[1]):
-            worldMatrix[self.coords[0]][self.coords[1]] = 0
-            if worldMatrix[x][y] == 1:
-                self.foodEaten += 1
-            self.coords = (x,y)
-            worldMatrix[x][y] = -1
-            self.rect.center = (y*TILE_SIZE + TILE_SIZE/2,x*TILE_SIZE + TILE_SIZE/2)
-            self.movesMade += 1
-            return True
-        else:
-            return False
-
-    def moveAI(self,worldMatrix):
-        num = random.randint(1,4)
-        if num == 1:
-                if self.updateLocation(worldMatrix,self.coords[0] + 1,self.coords[1]):
-                    return True
-        elif num == 2:
-                if self.updateLocation(worldMatrix,self.coords[0] - 1,self.coords[1]):
-                    return True
-        elif num == 3:
-                if self.updateLocation(worldMatrix,self.coords[0],self.coords[1]+1):
-                    return True
-        else:
-                if self.updateLocation(worldMatrix,self.coords[0] ,self.coords[1]-1):
-                    return True
-        return False
+STEP_TIME = 1.5
 
 def simulate(M,worldMatrix,moveCapacity, manualControl, render):
     ROWS,COLS = worldMatrix.shape
@@ -123,7 +76,8 @@ def simulate(M,worldMatrix,moveCapacity, manualControl, render):
                             M.updateLocation(worldMatrix,M.coords[0] ,M.coords[1]-1)
                     
         if not(manualControl) or not(render):
-            if M.moveAI(worldMatrix) and render: time.sleep(.1)
+            if M.moveAI(worldMatrix) and render:
+                 time.sleep(STEP_TIME)
 
         if render:
             #To be run if collision occurs between Monkey and Food
@@ -152,15 +106,34 @@ def simulate(M,worldMatrix,moveCapacity, manualControl, render):
 ###########################    Run Simulations    ################################
 ##################################################################################
 
-worldMatrix= createRandomBinaryMatrix(9,7,30)
-M = Monkey()
-simulate(M,worldMatrix,50,False, True)
-print(M.foodEaten)
+def Battle(C1,C2,trials):
+    score1 = 0
+    score2 = 0
 
-worldMatrix= createRandomBinaryMatrix(9,7,30)
-simulate(M,worldMatrix,50,False, False)
-print(M.foodEaten)
+    for i in range(0,trials):
+        worldMatrix= createRandomBinaryMatrix(9,7,25)
+        worldMatrixCopy = worldMatrix.copy()
+        simulate(C1,worldMatrix,50,False, False)
+        score1 += C1.foodEaten
+        simulate(C2,worldMatrixCopy,50,False, False)
+        score2 += C2.foodEaten
 
-worldMatrix= createRandomBinaryMatrix(9,7,1)
-simulate(M,worldMatrix,50,False, True)
-print(M.foodEaten)
+    return score1/trials, score2/trials
+
+
+def HillClimb():
+    C1 = Chimp(9)
+    for i in range(0,1000):
+        C2 = Chimp(9)
+        C2.brain = numpy.copy(C1.brain)
+        C2.mutate()
+
+        fitness = Battle(C1,C2,50)
+        print(fitness)
+        if fitness[1] > fitness [0]:
+            C1.brain = numpy.copy(C2.brain)
+
+    worldMatrix = createRandomBinaryMatrix(9,7,30)
+    simulate(C1,worldMatrix,50,False,True)
+
+HillClimb()

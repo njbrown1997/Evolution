@@ -2,7 +2,7 @@ import random, time
 import numpy
 
 def createRandomBinaryMatrix(m,n,z):
-    matrix = numpy.zeros((n,m),numpy.int8)
+    matrix = numpy.zeros((n,m))
     matrix[int(n/2)][int(m/2)] = -1
     insertedOnes = 0
     while insertedOnes < z:
