@@ -6,11 +6,13 @@ import random, time
 import numpy
 from Matrixes import *
 from Monkey import *
+import pickle
 
-STEP_TIME = 1.5
+STEP_TIME = .15
 
 def simulate(M,worldMatrix,moveCapacity, manualControl, render):
     ROWS,COLS = worldMatrix.shape
+    M.coords = (int(ROWS/2),int(COLS/2))
     if render:
         #Initializing 
         pygame.init()
@@ -115,25 +117,41 @@ def Battle(C1,C2,trials):
         worldMatrixCopy = worldMatrix.copy()
         simulate(C1,worldMatrix,50,False, False)
         score1 += C1.foodEaten
+        C1.foodEaten = 0
         simulate(C2,worldMatrixCopy,50,False, False)
         score2 += C2.foodEaten
+        C2.foodEaten = 0
 
     return score1/trials, score2/trials
 
 
-def HillClimb():
+def HillClimb(generations,seedFileName,fileName):
+    B = pickle.load(open(seedFileName +".pickle","rb"))
     C1 = Chimp(9)
-    for i in range(0,1000):
+    C1.brain = numpy.copy(B)
+    for i in range(0,generations):
         C2 = Chimp(9)
         C2.brain = numpy.copy(C1.brain)
         C2.mutate()
 
-        fitness = Battle(C1,C2,50)
+        fitness = Battle(C1,C2,1000)
         print(fitness)
-        if fitness[1] > fitness [0]:
+        if fitness[1] > 1.01*fitness [0]:
             C1.brain = numpy.copy(C2.brain)
+        if fitness[1] >= 13:
+            exit
 
-    worldMatrix = createRandomBinaryMatrix(9,7,30)
-    simulate(C1,worldMatrix,50,False,True)
+    pickle.dump(C1.brain,open(fileName + ".pickle","wb"))
 
-HillClimb()
+def Evolve(generations,seedFileName,fileName):
+    
+    HillClimb(generations,seedFileName,fileName)
+
+    B = pickle.load(open(seedFileName +".pickle","rb"))
+    C = Chimp(9)
+    C.brain = numpy.copy(B)
+    print(C.brain)
+    worldMatrix = createRandomBinaryMatrix(9,7,25)
+    simulate(C,worldMatrix,50,False,True)
+
+Evolve(200,"monkey13-722","monkey8")                                                                                                                                  

@@ -137,4 +137,6 @@ class Chimp(Monkey):
     def mutate(self):
         i = random.randint(0,self.brain.shape[0]-1)
         j = random.randint(0,self.brain.shape[0]-1)
-        self.brain[i][j] = random.random()*2 - 1
+        self.brain[i][j] = random.random()
+        #scale = 1 + (random.random() - 1/2)/8
+        #self.brain[i][j] = self.brain[i][j]*scale
