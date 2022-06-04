@@ -1,4 +1,5 @@
 #Imports
+from ast import expr_context
 from turtle import shape
 from venv import create
 import pygame, sys
@@ -140,3 +141,15 @@ class Chimp(Monkey):
         self.brain[i][j] = random.random()
         #scale = 1 + (random.random() - 1/2)/8
         #self.brain[i][j] = self.brain[i][j]*scale
+
+    def mutateExp(self):
+        i = random.randint(0,self.brain.shape[0]-1)
+        j = random.randint(0,self.brain.shape[0]-1)
+        try:
+            lowerBound = (math.exp(self.brain[i][j])-1)/(math.e-1)
+            upperBound = math.log(math.e*self.brain[i][j]- self.brain[i][j] + 1)
+            self.brain[i][j] = random.uniform(lowerBound,upperBound)
+        except:
+            self.brain[i][j] = random.random()
+        
+

@@ -8,7 +8,7 @@ from Matrixes import *
 from Monkey import *
 import pickle
 
-STEP_TIME = .15
+STEP_TIME = .5
 
 def simulate(M,worldMatrix,moveCapacity, manualControl, render):
     ROWS,COLS = worldMatrix.shape
@@ -125,33 +125,35 @@ def Battle(C1,C2,trials):
     return score1/trials, score2/trials
 
 
-def HillClimb(generations,seedFileName,fileName):
+def HillClimb(generations,trials,seedFileName,fileName):
     B = pickle.load(open(seedFileName +".pickle","rb"))
     C1 = Chimp(9)
     C1.brain = numpy.copy(B)
+    finalFitness = 0
     for i in range(0,generations):
         C2 = Chimp(9)
         C2.brain = numpy.copy(C1.brain)
-        C2.mutate()
+        C2.mutateExp()
 
-        fitness = Battle(C1,C2,1000)
+        fitness = Battle(C1,C2,trials)
         print(fitness)
-        if fitness[1] > 1.01*fitness [0]:
+        finalFitness = fitness[0]
+        if fitness[1] > fitness [0]:
             C1.brain = numpy.copy(C2.brain)
-        if fitness[1] >= 13:
-            exit
+            finalFitness = fitness[1]
 
-    pickle.dump(C1.brain,open(fileName + ".pickle","wb"))
+    pickle.dump(C1.brain,open(fileName + str(finalFitness) + ".pickle","wb"))
+    return fileName + str(finalFitness)
 
-def Evolve(generations,seedFileName,fileName):
-    
-    HillClimb(generations,seedFileName,fileName)
-
-    B = pickle.load(open(seedFileName +".pickle","rb"))
+def ObserveMonkey(fileName):
+    B = pickle.load(open(fileName +".pickle","rb"))
     C = Chimp(9)
     C.brain = numpy.copy(B)
-    print(C.brain)
     worldMatrix = createRandomBinaryMatrix(9,7,25)
     simulate(C,worldMatrix,50,False,True)
 
-Evolve(200,"monkey13-722","monkey8")                                                                                                                                  
+def Evolve(generations,trials,seedFileName,fileName):
+    resultMonkeyFile = HillClimb(generations,trials,seedFileName,fileName)
+    ObserveMonkey(resultMonkeyFile)
+
+Evolve(10000,100,"newMonkey7.48","newMonkey")                                                                                                                                  
