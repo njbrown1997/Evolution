@@ -149,6 +149,7 @@ def ObserveMonkey(fileName):
     B = pickle.load(open(fileName +".pickle","rb"))
     C = Chimp(9)
     C.brain = numpy.copy(B)
+    print(C.brain)
     worldMatrix = createRandomBinaryMatrix(9,7,25)
     simulate(C,worldMatrix,50,False,True)
 
@@ -156,4 +157,5 @@ def Evolve(generations,trials,seedFileName,fileName):
     resultMonkeyFile = HillClimb(generations,trials,seedFileName,fileName)
     ObserveMonkey(resultMonkeyFile)
 
-Evolve(10000,100,"newMonkey7.48","newMonkey")                                                                                                                                  
+for i in range(0,10):
+    ObserveMonkey("monkey14-117")                                                                                                                                  
